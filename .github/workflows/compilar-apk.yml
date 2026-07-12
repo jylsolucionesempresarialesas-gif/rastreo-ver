@@ -22,7 +22,8 @@ jobs:
         run: chmod +x gradlew
 
       - name: Compilar APK
-       run: ./gradlew assembleRegularDebug
+        run: ./gradlew assembleRegularDebug
+
       - name: Publicar APK para descargar
         uses: actions/upload-artifact@v4
         with:
