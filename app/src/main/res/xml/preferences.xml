@@ -53,4 +53,9 @@
         android:summaryOff="@string/settings_wakelock_off_summary"
         android:summaryOn="@string/settings_wakelock_on_summary"
         android:title="@string/settings_wakelock" />
+    <CheckBoxPreference
+        android:defaultValue="true"
+        android:key="foreground"
+        android:summary="@string/settings_foreground_summary"
+        android:title="@string/settings_foreground_title" />
 </PreferenceScreen>
