@@ -21,6 +21,7 @@ import android.location.Location
 import android.location.LocationListener
 import android.location.LocationManager
 import android.os.Bundle
+import android.os.Handler
 import android.os.Looper
 
 class AndroidPositionProvider(context: Context, listener: PositionListener) : PositionProvider(context, listener), LocationListener {
@@ -28,18 +29,73 @@ class AndroidPositionProvider(context: Context, listener: PositionListener) : Po
     private val locationManager = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
     private val provider = getProvider(preferences.getString(MainFragment.KEY_ACCURACY, "medium"))
 
+    // --- LATIDO EN REPOSO (heartbeat) ---
+    // Fuerza un reporte cada 'interval' aunque el celular esté QUIETO,
+    // porque Android/MagicOS deja de entregar ubicaciones cuando no hay movimiento.
+    private val handler = Handler(Looper.getMainLooper())
+    private var lastKnown: Location? = null
+
+    private val heartbeatRunnable = object : Runnable {
+        override fun run() {
+            heartbeat()
+            handler.postDelayed(this, interval)
+        }
+    }
+
     @SuppressLint("MissingPermission")
     override fun startUpdates() {
         try {
             locationManager.requestLocationUpdates(
                     provider, if (distance > 0 || angle > 0) MINIMUM_INTERVAL else interval, 0f, this)
+
+            // Semilla: si aún no tenemos posición, tomar la última conocida para el primer latido
+            if (lastKnown == null) {
+                lastKnown = try {
+                    locationManager.getLastKnownLocation(provider)
+                } catch (e: Exception) {
+                    null
+                }
+            }
+
+            // Arrancar el latido en reposo
+            handler.removeCallbacks(heartbeatRunnable)
+            handler.postDelayed(heartbeatRunnable, interval)
         } catch (e: RuntimeException) {
             listener.onPositionError(e)
         }
     }
 
     override fun stopUpdates() {
+        handler.removeCallbacks(heartbeatRunnable)
         locationManager.removeUpdates(this)
+    }
+
+    // Cada latido: 1) pide una lectura fresca (reactiva el GPS y actualiza la posición),
+    //              2) reenvía la última posición conocida con la HORA ACTUAL para
+    //                 garantizar un reporte aunque el GPS no alcance a dar lectura nueva.
+    @SuppressLint("MissingPermission")
+    @Suppress("DEPRECATION")
+    private fun heartbeat() {
+        try {
+            locationManager.requestSingleUpdate(provider, object : LocationListener {
+                override fun onLocationChanged(location: Location) {
+                    lastKnown = location
+                }
+
+                override fun onStatusChanged(provider: String, status: Int, extras: Bundle) {}
+                override fun onProviderEnabled(provider: String) {}
+                override fun onProviderDisabled(provider: String) {}
+            }, Looper.getMainLooper())
+        } catch (e: RuntimeException) {
+            listener.onPositionError(e)
+        }
+
+        val base = lastKnown
+        if (base != null) {
+            val beat = Location(base)
+            beat.time = System.currentTimeMillis()
+            processLocation(beat)
+        }
     }
 
     @Suppress("DEPRECATION", "MissingPermission")
@@ -65,6 +121,7 @@ class AndroidPositionProvider(context: Context, listener: PositionListener) : Po
     }
 
     override fun onLocationChanged(location: Location) {
+        lastKnown = location
         processLocation(location)
     }
 
