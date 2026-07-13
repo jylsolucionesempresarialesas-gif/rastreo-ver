@@ -2,6 +2,7 @@
 <resources>
   <string name="app_name">RASTREO VER</string>
   <string name="app_logo">RASTREO VER</string>
+  <string name="settings_url_default_value">https://puente-rastreo.onrender.com/?clave=VERrastreo2026K9mPq7nLw3xZ8tQ</string>
   <string name="shortcut_start">Start service</string>
   <string name="shortcut_stop">Stop service</string>
   <string name="shortcut_sos">Send SOS</string>
