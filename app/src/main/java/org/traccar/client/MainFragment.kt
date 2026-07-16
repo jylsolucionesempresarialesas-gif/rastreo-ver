@@ -258,6 +258,7 @@ class MainFragment : PreferenceFragmentCompat(), OnSharedPreferenceChangeListene
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
             alarmManager.cancel(alarmIntent)
         }
+        TrackingWatchdogWorker.cancel(requireContext())
         requireActivity().stopService(Intent(activity, TrackingService::class.java))
         setPreferencesEnabled(true)
     }

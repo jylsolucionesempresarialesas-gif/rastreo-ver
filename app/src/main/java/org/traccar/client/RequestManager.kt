@@ -25,15 +25,20 @@ import java.net.URL
 
 object RequestManager {
 
-    private const val TIMEOUT = 15 * 1000
+    // v_render_cold_start: el puente en Render (plan gratis) puede tardar
+    // ~50 s en despertar si estuvo dormido. CONNECT_TIMEOUT se deja corto
+    // para detectar "no hay red" rapido; READ_TIMEOUT se sube para no
+    // descartar el intento mientras el servidor todavia esta arrancando.
+    private const val CONNECT_TIMEOUT = 15 * 1000
+    private const val READ_TIMEOUT = 60 * 1000
 
     fun sendRequest(request: String?): Boolean {
         var inputStream: InputStream? = null
         return try {
             val url = URL(request)
             val connection = url.openConnection() as HttpURLConnection
-            connection.readTimeout = TIMEOUT
-            connection.connectTimeout = TIMEOUT
+            connection.readTimeout = READ_TIMEOUT
+            connection.connectTimeout = CONNECT_TIMEOUT
             connection.requestMethod = "POST"
             connection.connect()
             inputStream = connection.inputStream

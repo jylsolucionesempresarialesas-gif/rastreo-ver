@@ -57,6 +57,7 @@ class TrackingService : Service() {
                 }
                 trackingController = TrackingController(this)
                 trackingController?.start()
+                TrackingWatchdogWorker.schedule(this)
             }
         } catch (e: RuntimeException) {
             Log.w(TAG, e)
@@ -83,6 +84,18 @@ class TrackingService : Service() {
             wakeLock?.release()
         }
         trackingController?.stop()
+    }
+
+    // v_watchdog: en varios fabricantes (incluido Honor/MagicOS), deslizar
+    // la app fuera de "Recientes" mata el proceso aunque el servicio sea
+    // foreground. Si el rastreo debia seguir activo, se programa un
+    // reintento casi inmediato en vez de esperar el ciclo de 15 min.
+    override fun onTaskRemoved(rootIntent: Intent?) {
+        super.onTaskRemoved(rootIntent)
+        val sharedPreferences = PreferenceManager.getDefaultSharedPreferences(this)
+        if (sharedPreferences.getBoolean(MainFragment.KEY_STATUS, false)) {
+            TrackingWatchdogWorker.scheduleImmediate(this)
+        }
     }
 
     companion object {
